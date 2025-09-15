@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="board.mapper.CommentMapper">
+	<select id="selectCommentList" parameterType="int" resultType="board.dto.CommentDTO">
+    WITH RECURSIVE replyCTE AS (
+        SELECT 
+            no,
+            board_no,
+            CASE WHEN hidden = 1 THEN '삭제된 댓글입니다.' ELSE contents END AS contents,
+            parent,
+            groupId,
+            order_no,
+            CASE WHEN hidden = 1 THEN NULL ELSE nickname END AS nickname,
+            reg_date,
+            hidden,
+            0 AS depth
+        FROM reply
+        WHERE board_no = #{board_no} AND parent = 0
+
+        UNION ALL
+
+        SELECT 
+            c.no,
+            c.board_no,
+            CASE WHEN c.hidden = 1 THEN '삭제된 댓글입니다.' ELSE c.contents END AS contents,
+            c.parent,
+            c.groupId,
+            c.order_no,
+            CASE WHEN c.hidden = 1 THEN NULL ELSE c.nickname END AS nickname,
+            c.reg_date,
+            c.hidden,
+            p.depth + 1
+        FROM reply c
+        INNER JOIN replyCTE p ON c.parent = p.no
+    )
+    SELECT * 
+    FROM replyCTE
+    ORDER BY groupId DESC, order_no ASC;
+	</select>
+	
+	<insert id="insertComment" parameterType="board.dto.CommentDTO" useGeneratedKeys="true" keyProperty="no">
+		INSERT INTO
+			reply(board_no, contents, parent, groupId, order_no, nickname, password)
+		VALUE (#{board_no}, #{contents}, #{parent}, #{groupId}, #{order_no}, #{nickname}, #{password})
+	
+	</insert>
+	
+	<update id="updateGroupId">
+	    UPDATE reply
+	    SET groupId = #{groupId}
+	    WHERE no = #{no}
+	</update>
+	
+	<select id="selectCommentById" parameterType="int" resultType="board.dto.CommentDTO">
+	    SELECT * FROM reply WHERE no = #{no}
+	</select>
+	
+	<select id="getNextOrderNo" resultType="int">
+	    SELECT COALESCE(MAX(order_no), 0) + 1
+	    FROM reply
+	    WHERE groupId = #{groupId}
+	</select>
+	<select id="replyPasswordCheck" resultType="int">
+		<![CDATA[
+			SELECT
+				count(*)
+			FROM
+				reply
+			where
+				no = #{no} AND password = #{password}
+		]]>
+	</select>
+	
+	<update id="deleteComment" parameterType="int">
+		UPDATE
+			reply
+		SET
+			hidden = 1, del_date = now()
+		WHERE
+			no = #{no}
+	</update>
+</mapper>

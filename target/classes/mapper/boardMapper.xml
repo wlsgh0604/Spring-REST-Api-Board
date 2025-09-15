@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="board.mapper.BoardMapper">
+	<insert id="writeBoard" parameterType="board.dto.BoardDTO" useGeneratedKeys="true" keyProperty="no">
+		<![CDATA[
+			INSERT INTO board(subject, password, contents, nickname, source)
+			values(#{subject},#{password},#{contents},#{nickname},#{source})
+		]]>
+	</insert>
+	<select id="countBoardAll" resultType="int">
+		<![CDATA[
+	     	SELECT
+	     		count(*)
+	     	FROM
+	     		board
+	     	WHERE
+	     		hidden = 0
+		]]>
+	</select>
+	<select id="countBoard" parameterType="board.dto.SearchDTO" resultType="int">
+	    SELECT COUNT(*)
+	    FROM board
+	    WHERE hidden = 0
+	    <if test="keyword != null and keyword != ''">
+	        <choose>
+	            <when test="searchType == 'subject'">
+	                AND subject LIKE CONCAT('%', #{keyword}, '%')
+	            </when>
+	            <when test="searchType == 'contents'">
+	                AND contents LIKE CONCAT('%', #{keyword}, '%')
+	            </when>
+	            <when test="searchType == 'nickname'">
+	                AND nickname LIKE CONCAT('%', #{keyword}, '%')
+	            </when>
+	        </choose>
+	    </if>
+	</select>
+	<select id="selectBoardList" parameterType="board.dto.SearchDTO" resultType="board.dto.BoardDTO">
+	    SELECT
+	        no,
+	        subject,
+	        hit,
+	        nickname,
+	        regist_time
+	    FROM board
+	    WHERE hidden = 0
+	    <if test="keyword != null and keyword != ''">
+	        <choose>
+	            <when test="searchType == 'subject'">
+	                AND subject LIKE CONCAT('%', #{keyword}, '%')
+	            </when>
+	            <when test="searchType == 'contents'">
+	                AND contents LIKE CONCAT('%', #{keyword}, '%')
+	            </when>
+	            <when test="searchType == 'nickname'">
+	                AND nickname LIKE CONCAT('%', #{keyword}, '%')
+	            </when>
+	        </choose>
+	    </if>
+	    ORDER BY no DESC
+	    LIMIT #{offset}, #{recordSize}
+	</select>
+	<select id="selectBoard" resultType="board.dto.BoardDTO">
+		<![CDATA[
+	     	SELECT
+	     		no,
+	     		subject,
+	     		contents,
+	     		hit,
+	     		nickname,
+	     		source,
+	     		regist_time
+	     	FROM
+	     		board
+	     	WHERE
+	     		hidden = 0 And no = #{no}
+	     	ORDER BY no DESC
+		]]>
+	</select>
+	<update id="updateBoard">
+		<![CDATA[
+			UPDATE
+				board
+			SET
+				subject = #{subject}, contents = #{contents}, source = #{source}
+			WHERE
+				no = #{no}
+		]]>
+	</update>
+	<select id="passwordCheck" resultType="int">
+		<![CDATA[
+			SELECT
+				count(*)
+			FROM
+				board
+			where
+				no = #{no} AND password = #{password}
+		]]>
+	</select>
+	
+	<update id="deleteBoard">
+		<![CDATA[
+			UPDATE board SET hidden = 1 WHERE no = #{no}
+		]]>
+	</update>
+	
+	<update id="hitboard" parameterType="int">
+		<![CDATA[
+			UPDATE
+				board
+			SET
+				hit = hit+1
+			WHERE
+				no = #{no}
+		]]>
+	</update>
+
+
+</mapper>
